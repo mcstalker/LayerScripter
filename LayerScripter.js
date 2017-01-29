@@ -1,6 +1,7 @@
 // Github:   https://github.com/mcstalker/LayerScripter
 // By:       Michael Stalker
-// Contact:  
+// Contact:  https://app.roll20.net/users/1377180/michael-s
+
 var HTMLScripter = HTMLScripter || (function () {
     'use strict';
 
@@ -51,6 +52,7 @@ var LayerScripter = LayerScripter || (function () {
         RENAME_ACTION = '!layerscripter_rename_action',
         REMOVE_ACTION = '!layerscripter_remove_action',
         CHANGE_DEST_LAYER = '!layerscripter_new_destination_layer',
+        VALID_LAYERS = ['gmlayer', 'objects', 'map', 'walls'],
         Version = 0.2,
         Schema = 0.1,
         Style_CSS = {
@@ -136,6 +138,15 @@ var LayerScripter = LayerScripter || (function () {
                 'border-top': 'solid 1px #000',
                 'width': '100%',
             },
+            td_more_less_button: {
+                'text-align': 'left',
+                'width': '50px',
+            },
+            td_more_less_action: {
+                'text-align': 'left',
+                'width': '50px',
+                'padding-left': '24px',
+            },
             li: {
                 'padding': '10px',
                 'list-style-type': 'decimal',
@@ -201,9 +212,17 @@ var LayerScripter = LayerScripter || (function () {
             Obj,
             ops;
 
-        if ((typeof ButtonId !== 'undefined') && (ButtonId in state.LayerScripter.Buttons)) {
-            if ((typeof Selected !== 'undefined') && (Selected.length > 0)) {
-                for (i in Selected) {
+        if (!IsButtonIdValid(ButtonId)) {
+            SendChat('The action could not be created because the Button Id provided is not valid.');
+            return (false);
+        }
+        if (!IsLayerValid(NewLayer)) {
+            SendChat('The action could not be created because the layer provided is not valid.');
+            return (false);
+        }
+        if ((typeof Selected !== 'undefined') && (Selected.length > 0)) {
+            for (i in Selected) {
+                if (!IsActionIdValid(ButtonId, ActionId)) {
                     ActionId = Selected[i]._id;
                     state.LayerScripter.Buttons[ButtonId].Actions[ActionId] = {};
                     state.LayerScripter.Buttons[ButtonId].Actions[ActionId].Type = Selected[i]._type;
@@ -224,19 +243,25 @@ var LayerScripter = LayerScripter || (function () {
                         state.LayerScripter.Buttons[ButtonId].Actions[ActionId].NewLayer = NewLayer;
                     }
                 }
+                else {
+                    SendChat(state.LayerScripter.Buttons[ButtonId].Actions[ActionId].Name + ' could not be added because it already exists.')
+                }
             }
-        };
+        }
+        else {
+            SendChat('No actions where created because no graphics where selected.');
+        }
     };
 
     var AddButton = function (ButtonName, PlayerId) {
 
         var ButtonId;
 
-        if (ButtonName == "") {
+        if (ButtonName == '') {
             SendChat('No button name found.  Please use a unique name.');
         }
         else if (IsButtonNameUnique(ButtonName)) {
-            ButtonId = GetButtonId(ButtonName);
+            ButtonId = GetMacroButtonId(ButtonName);
             state.LayerScripter.Buttons[ButtonId] = {};
             state.LayerScripter.Buttons[ButtonId].Name = ButtonName;
             state.LayerScripter.Buttons[ButtonId].MacroId = GetOrCreateMacroButton(ButtonId, PlayerId);
@@ -244,7 +269,7 @@ var LayerScripter = LayerScripter || (function () {
             state.LayerScripter.Buttons[ButtonId].Actions = {};
         }
         else {
-            SendChat(ButtonName + ' already exists.  Please use a unique name.');
+            SendChat('A button named ' + ButtonName + ' already exists.  Please use a unique name.');
         }
     };
 
@@ -258,7 +283,8 @@ var LayerScripter = LayerScripter || (function () {
             ActionNewLayer,
             ButtonId,
             ButtonName,
-            NewLayer;
+            NewLayer,
+            NewName;
 
         if ((Roll20_msg.type == "api") && (Roll20_msg.content.toLowerCase().indexOf(SHOW_BUTTONS) === 0)) {
             if (playerIsGM(Roll20_msg.playerid)) {
@@ -272,45 +298,66 @@ var LayerScripter = LayerScripter || (function () {
                     arg = args.shift().split(/\s+/);
                     switch (arg[0].toLowerCase()) {
                         case 'addaction':
-                            ButtonId = arg.splice(1, 1);
-                            NewLayer = arg.splice(1, 1);
+                            ButtonId = arg.splice(1, 1)[0];
+                            NewLayer = arg.splice(1, 1)[0];
                             AddAction(ButtonId, Roll20_msg.selected, NewLayer);
                             break;
                         case 'addbutton':
                             ButtonName = arg.splice(1, arg.length - 1).join('-');
                             AddButton(ButtonName, Roll20_msg.playerid);
                             break;
+                        case 'changecurrentlayer':
+                            ButtonId = arg.splice(1, 1)[0];
+                            ActionId = arg.splice(1, 1)[0];
+                            NewLayer = arg.splice(1, 1)[0];
+                            ChangeCurrentLayer(ButtonId, ActionId, NewLayer);
+                            break
                         case 'changenewlayer':
-                            ButtonId = arg.splice(1, 1);
-                            ActionId = arg.splice(1, 1);
-                            NewLayer = arg.splice(1, 1);
+                            ButtonId = arg.splice(1, 1)[0];
+                            ActionId = arg.splice(1, 1)[0];
+                            NewLayer = arg.splice(1, 1)[0];
                             ChangeActionLayer(ButtonId, ActionId, NewLayer);
+                            break
                         case 'executed':
-                            ButtonId = arg.splice(1, 1);
+                            ButtonId = arg.splice(1, 1)[0];
                             ExecutedButton(ButtonId);
+                            break;
+                        case 'executeaction':
+                            ButtonId = arg.splice(1, 1)[0];
+                            ActionId = arg.splice(1, 1)[0];
+                            ExecuteAction(ButtonId, ActionId);
                             break;
                         case 'help':
                             ShowHelp();
                             break;
                         case 'listactions':
-                            ButtonId = arg.splice(1, 1);
+                            ButtonId = arg.splice(1, 1)[0];
                             ChangeShowAction(ButtonId);
                             break;
                         case 'listactionsdetail':
-                            ButtonId = arg.splice(1, 1);
-                            ActionId = arg.splice(1, 1);
+                            ButtonId = arg.splice(1, 1)[0];
+                            ActionId = arg.splice(1, 1)[0];
                             ChangeShowActionDetail(ButtonId, ActionId);
                             break;
                         case 'removebutton':
-                            ButtonId = arg.splice(1, 1);
+                            ButtonId = arg.splice(1, 1)[0];
                             RemoveButton(ButtonId)
                             break;
                         case 'removeaction':
-                            ButtonId = arg.splice(1, 1);
-                            ActionId = arg.splice(1, 1);
+                            ButtonId = arg.splice(1, 1)[0];
+                            ActionId = arg.splice(1, 1)[0];
                             RemoveAction(ButtonId, ActionId);
                             break;
+                        case 'renameaction':
+                            ButtonId = arg.splice(1, 1)[0];
+                            ActionId = arg.splice(1, 1)[0];
+                            NewName = arg.splice(1, arg.length - 1).join(' ');
+                            RenameAction(ButtonId, ActionId, NewName);
+                            break;
                         case 'renamebutton':
+                            ButtonId = arg.splice(1, 1)[0];
+                            NewName = arg.splice(1, arg.length - 1).join('-');
+                            RenameButton(ButtonId, NewName);
                             break;
                         default:
                             ShowButtons();
@@ -323,15 +370,55 @@ var LayerScripter = LayerScripter || (function () {
     };
 
     var ChangeActionLayer = function (ButtonId, ActionId, NewLayer) {
-        state.LayerScripter.Buttons[ButtonId].Actions[ActionId].NewLayer = NewLayer;
+        if ((IsActionIdValid(ButtonId, ActionId)) && (IsLayerValid(NewLayer))) {
+            state.LayerScripter.Buttons[ButtonId].Actions[ActionId].NewLayer = NewLayer;
+        }
+        else {
+            SendChat('Could not change the objects new layer.  Please check that you have provided a valid Button Id, Action Id and Layer Name.')
+        }
     }
 
-    var ChangeShowAction = function (ButtonId) {
-        state.LayerScripter.Buttons[ButtonId].ShowActions = !state.LayerScripter.Buttons[ButtonId].ShowActions;
-    };
-    var ChangeShowActionDetail = function (ButtonId, ActionId) {
-        state.LayerScripter.Buttons[ButtonId].Actions[ActionId].ShowDetail = !state.LayerScripter.Buttons[ButtonId].Actions[ActionId].ShowDetail;
+    var ChangeCurrentLayer = function (ButtonId, ActionId, NewLayer) {
+        if ((IsActionIdValid(ButtonId, ActionId)) && (IsLayerValid(NewLayer))) {
+            if (ChangeLayer(ActionId, NewLayer)) {
+                state.LayerScripter.Buttons[ButtonId].Actions[ActionId].CurrentLayer = NewLayer;
+            }
+            else {
+                SendChat('There was an error when moving the object to the layer provided.')
+            }
+        }
+        else {
+            SendChat('Could not change the objects current layer.  Please check that you have provided a valid Button Id, Action Id and Layer Name.')
+        }
     }
+
+    var ChangeLayer = function (ActionId, NewLayer) {
+        var Attr = { _id: ActionId },
+        Obj = FindObj(Attr)[0];
+
+        if (Obj) {
+            Obj.set('layer', NewLayer);
+            return (true);
+        }
+
+        return (false);
+    };
+
+    var ChangeShowAction = function (ButtonId) {
+        if (IsButtonIdValid(ButtonId)) {
+            state.LayerScripter.Buttons[ButtonId].ShowActions = !state.LayerScripter.Buttons[ButtonId].ShowActions;
+            return (true);
+        };
+        return (false);
+    };
+
+    var ChangeShowActionDetail = function (ButtonId, ActionId) {
+        if (IsActionIdValid(ButtonId, ActionId)) {
+            state.LayerScripter.Buttons[ButtonId].Actions[ActionId].ShowDetail = !state.LayerScripter.Buttons[ButtonId].Actions[ActionId].ShowDetail;
+            return (true);
+        };
+        return (false);
+    };
 
     var CheckInstaller = function () {
 
@@ -353,47 +440,39 @@ var LayerScripter = LayerScripter || (function () {
         on('chat:message', ChatHandler);
     };
 
-    var ExecutedAction = function (ButtonId, ActionId) {
+    var ExecuteAction = function (ButtonId, ActionId) {
 
-        var Attr = { _id: ActionId, _type: state.LayerScripter.Buttons[ButtonId].Actions[ActionId].Type },
-            Obj;
+        var OldLayer;
 
-        if (FindObj(Attr)) {
-
-            Obj = FindObj(Attr)[0];
-
-            //'objects', 'gmlayer', 'map', or 'walls'
-            log('ExecutedAction:NewLayer:\'' + state.LayerScripter.Buttons[ButtonId].Actions[ActionId].NewLayer + '\'');
-            if (state.LayerScripter.Buttons[ButtonId].Actions[ActionId].NewLayer == 'map') {
-                Obj.set('layer', 'map');
-            }
-            if (state.LayerScripter.Buttons[ButtonId].Actions[ActionId].NewLayer == 'walls') {
-                Obj.set('layer', 'walls');
-            }
-            if (state.LayerScripter.Buttons[ButtonId].Actions[ActionId].NewLayer == 'gmlayer') {
-                Obj.set('layer', 'gmlayer');
-            }
-            if (state.LayerScripter.Buttons[ButtonId].Actions[ActionId].NewLayer == 'objects') {
-                Obj.set('layer', 'objects');
-            }
-
-            state.LayerScripter.Buttons[ButtonId].Actions[ActionId].NewLayer = state.LayerScripter.Buttons[ButtonId].Actions[ActionId].CurrentLayer;
-            state.LayerScripter.Buttons[ButtonId].Actions[ActionId].CurrentLayer = Obj.get('layer');
+        if (IsActionIdValid(ButtonId, ActionId)) {
+            if (ChangeLayer(ActionId, state.LayerScripter.Buttons[ButtonId].Actions[ActionId].NewLayer)) {
+                OldLayer = state.LayerScripter.Buttons[ButtonId].Actions[ActionId].NewLayer;
+                state.LayerScripter.Buttons[ButtonId].Actions[ActionId].NewLayer = state.LayerScripter.Buttons[ButtonId].Actions[ActionId].CurrentLayer;
+                state.LayerScripter.Buttons[ButtonId].Actions[ActionId].CurrentLayer = OldLayer;
+                return (true);
+            };
+        }
+        else {
+            SendChat('Could not execute the action because the Button Id and/or Action Id was not valid.');
         };
 
-        return;
+        return (false);
     };
 
     var ExecutedButton = function (ButtonId) {
 
         var ActionId;
 
-        if (typeof state.LayerScripter.Buttons[ButtonId] !== 'undefined') {
+        if (IsButtonIdValid(ButtonId)) {
             for (ActionId in state.LayerScripter.Buttons[ButtonId].Actions) {
-                ExecutedAction(ButtonId, ActionId);
+                ExecuteAction(ButtonId, ActionId);
             }
+            return (true);
         }
-        return;
+        else {
+            SendChat('Could not execute the action because the Button Id was not valid.');
+        };
+        return (false);
     };
 
     var FindButtonId = function (ButtonName) {
@@ -410,6 +489,7 @@ var LayerScripter = LayerScripter || (function () {
 
     var FindMacroId = function (ButtonName) {
         var Obj = FindObj({ type: 'macro', name: ButtonName })[0];
+        log(Obj.get(_id));
         if (Obj) {
             return (Obj.get(_id));
         }
@@ -430,7 +510,11 @@ var LayerScripter = LayerScripter || (function () {
     //  Input: string (ButtonName)
     //  Output: number
 
-    var GetButtonId = function (ButtonName) {
+    var GetLayerQuestion = function () {
+        return (' ?{New Layer|' + VALID_LAYERS.join('|') + '}');
+    }
+
+    var GetMacroButtonId = function (ButtonName) {
 
         if ((typeof ButtonName !== 'undefined') || (!FindMacroId(ButtonName))) {
             return (guid());
@@ -443,28 +527,14 @@ var LayerScripter = LayerScripter || (function () {
         }
     };
 
-    // This function takes a Roll20 character object Id string and an attribute name string.  It check to see if the attribute exists and returns the existing object or creates a new attribute and returns that object.
-    //  Input: String (Id {Roll20 Object Id String}), String (Attribute Name)
-    //  Output: Roll20 Object to new or existing Attribute
-
-    var GetOrCreateMarco = function (MarcoName) {
-
-        if (IfAttrExists(CharID, AttrName)) {
-            return (FindObj({ type: 'attribute', characterid: CharID, name: AttrName })[0]);
-        }
-        else {
-            return (createObj('attribute', { name: AttrName, characterid: CharID }));
-        }
-    };
-
     // IsButtonNameUnique compares the given ButtonName to existing button names.  If a match is found it return false otherwise it returns true.
     //  Input: string (ButtonName)
     //  Output: boolean
 
     var GetOrCreateMacroButton = function (ButtonId, PlayerId) {
-        var Obj = FindObj({ _type: 'macro', name: state.LayerScripter.Buttons[ButtonId].Name });
+        var Obj = FindObj({ _type: 'macro', name: state.LayerScripter.Buttons[ButtonId].Name })[0];
         if ((typeof Obj !== 'undefined') && (Obj.length > 0)) {
-            return Obj[0].get('_id');
+            return Obj.get('_id');
         }
         else {
             Obj = createObj('macro', {
@@ -483,18 +553,44 @@ var LayerScripter = LayerScripter || (function () {
                 .substring(1);
         }
         return s4() + s4() + '-' + s4() + '-' + s4() + '-' + s4() + '-' + s4() + s4() + s4();
-    }
+    };
+
+    var IsActionIdValid = function (ButtonId, ActionId) {
+        if (IsButtonIdValid(ButtonId)
+            && (typeof ActionId !== 'undefined')
+            && (typeof ActionId === 'string')
+            && (ActionId in state.LayerScripter.Buttons[ButtonId].Actions)) {
+            return (true);
+        }
+        return (false);
+    };
+
+    var IsButtonIdValid = function (ButtonId) {
+        if ((typeof ButtonId !== 'undefined')
+            && (typeof ButtonId === 'string')
+            && (ButtonId in state.LayerScripter.Buttons)) {
+            return (true);
+        }
+        return (false);
+    };
 
     var IsButtonNameUnique = function (ButtonName) {
 
-        var ButtonId;
-        if (typeof state.LayerScripter.Buttons !== 'undefined') {
-            if (FindButtonId(ButtonName)) {
+        if (FindButtonId(ButtonName)) {
                 return (false);
-            }
         };
-
         return (true);
+    };
+
+    var IsLayerValid = function (Layer) {
+        if ((typeof Layer !== 'undefined')
+            && (typeof Layer === 'string')
+            && (VALID_LAYERS.indexOf(Layer) !== -1)) {
+            return (true);
+        }
+
+        return (false);
+
     };
 
     var RemoveAction = function (ButtonId, ActionId) {
@@ -540,11 +636,37 @@ var LayerScripter = LayerScripter || (function () {
         }
     };
 
+    var RenameAction = function (ButtonId, ActionId, NewName) {
+
+        log('RenameAction:ButtonId::' + ButtonId);
+        log('RenameAction:ActionId::' + ActionId);
+        log('RenameAction:NewName::' + NewName);
+
+        state.LayerScripter.Buttons[ButtonId].Actions[ActionId].Name = NewName;
+    }
+
+    var RenameButton = function (ButtonId, ButtonName) {
+
+        var MacroButtonObj = FindObj({ type: 'macro', _id: state.LayerScripter.Buttons[ButtonId].MacroId })[0];
+
+        if (ButtonName == '') {
+            SendChat('No button name found.  Please use a unique name.');
+        }
+        else if (IsButtonNameUnique(ButtonName)) {
+            MacroButtonObj.set('name', ButtonName)
+            state.LayerScripter.Buttons[ButtonId].Name = ButtonName;
+        }
+        else {
+            SendChat(ButtonName + ' already exists.  Please use a unique name.');
+        }
+
+    }
+
     // This function send a message to the campaigns chat window from XP_tracker
     // Input: String = message to send
     // Output: None
     var SendChat = function (output_msg) {
-        sendChat('LayerScripter', output_msg);
+        sendChat('LayerScripter', '/w gm ' + output_msg);
     }
 
     var ShowActions = function (ButtonId, ActionId) {
@@ -555,13 +677,7 @@ var LayerScripter = LayerScripter || (function () {
         if (typeof state.LayerScripter.Buttons[ButtonId].Actions[ActionId].Name === 'string') {
             Action_Output += HTMLCode.build('td', state.LayerScripter.Buttons[ButtonId].Actions[ActionId].Name, HTMLCode.CSSStyle(Style_CSS.td_action_text));
         }
-        if (state.LayerScripter.Buttons[ButtonId].Actions[ActionId].ShowDetail) {
-            ShowActionDetailText = 'Less';
-        }
-        else {
-            ShowActionDetailText = 'More';
-        }
-        Action_Output += HTMLCode.build('td', HTMLCode.build('a', ShowActionDetailText, Object.assign(HTMLCode.CSSStyle(Style_CSS.a_greembutton), { href: '!LayerScripter --ListActionsDetail ' + ButtonId + ' ' + ActionId })), HTMLCode.CSSStyle(Style_CSS.td_button));
+        Action_Output += HTMLCode.build('td', HTMLCode.build('a', 'Rename', Object.assign(HTMLCode.CSSStyle(Style_CSS.a_greembutton), { href: '!LayerScripter --RenameAction ' + ButtonId + ' ' + ActionId + ' ?{New Name}' })), HTMLCode.CSSStyle(Style_CSS.td_button));
         Action_Output += HTMLCode.build('td', HTMLCode.build('a', 'Remove', Object.assign(HTMLCode.CSSStyle(Style_CSS.a_redbutton), { href: '!LayerScripter --RemoveAction ' + ButtonId + ' ' + ActionId })), HTMLCode.CSSStyle(Style_CSS.td_button));
 
         return (Action_Output);
@@ -579,9 +695,9 @@ var LayerScripter = LayerScripter || (function () {
         state.LayerScripter.Buttons[ButtonId].Actions[ActionId].NewLayer
         state.LayerScripter.Buttons[ButtonId].Actions[ActionId].PageId
 
-        Action_Detail_Output += HTMLCode.build('tr', HTMLCode.build('td', 'Type: ' + state.LayerScripter.Buttons[ButtonId].Actions[ActionId].Type, Object.assign({ colspan: '3' }, HTMLCode.CSSStyle(Style_CSS.td_action_detail_text))), TR_Middle_Style_CSS);
-        Action_Detail_Output += HTMLCode.build('tr', HTMLCode.build('td', 'Current Layer: ' + state.LayerScripter.Buttons[ButtonId].Actions[ActionId].CurrentLayer, Object.assign({ colspan: '3' }, HTMLCode.CSSStyle(Style_CSS.td_action_detail_text))), TR_Middle_Style_CSS);
-        Action_Detail_Output += HTMLCode.build('tr', HTMLCode.build('td', 'New Layer: ' + state.LayerScripter.Buttons[ButtonId].Actions[ActionId].NewLayer, Object.assign({ colspan: '2' }, HTMLCode.CSSStyle(Style_CSS.td_action_detail_text))) + HTMLCode.build('td', HTMLCode.build('a', 'Change', Object.assign(HTMLCode.CSSStyle(Style_CSS.a_greembutton), { href: '!LayerScripter --ChangeNewLayer ' + ButtonId + ' ' + ActionId + ' ?{New Layer|gmlayer|objects|map|walls}' })), HTMLCode.CSSStyle(Style_CSS.td_button)), TR_Middle_Style_CSS);
+        Action_Detail_Output += HTMLCode.build('tr', HTMLCode.build('td', 'Type: ' + state.LayerScripter.Buttons[ButtonId].Actions[ActionId].Type, Object.assign({ colspan: '2' }, HTMLCode.CSSStyle(Style_CSS.td_action_detail_text))) + HTMLCode.build('td', HTMLCode.build('a', 'Execute', Object.assign(HTMLCode.CSSStyle(Style_CSS.a_greembutton), { href: '!LayerScripter --ExecuteAction ' + ButtonId + ' ' + ActionId })), HTMLCode.CSSStyle(Style_CSS.td_button)), TR_Middle_Style_CSS);
+        Action_Detail_Output += HTMLCode.build('tr', HTMLCode.build('td', 'Current Layer: ' + state.LayerScripter.Buttons[ButtonId].Actions[ActionId].CurrentLayer, Object.assign({ colspan: '2' }, HTMLCode.CSSStyle(Style_CSS.td_action_detail_text))) + HTMLCode.build('td', HTMLCode.build('a', 'Change', Object.assign(HTMLCode.CSSStyle(Style_CSS.a_greembutton), { href: '!LayerScripter --ChangeCurrentLayer ' + ButtonId + ' ' + ActionId + GetLayerQuestion() })), HTMLCode.CSSStyle(Style_CSS.td_button)), TR_Middle_Style_CSS);
+        Action_Detail_Output += HTMLCode.build('tr', HTMLCode.build('td', 'New Layer: ' + state.LayerScripter.Buttons[ButtonId].Actions[ActionId].NewLayer, Object.assign({ colspan: '2' }, HTMLCode.CSSStyle(Style_CSS.td_action_detail_text))) + HTMLCode.build('td', HTMLCode.build('a', 'Change', Object.assign(HTMLCode.CSSStyle(Style_CSS.a_greembutton), { href: '!LayerScripter --ChangeNewLayer ' + ButtonId + ' ' + ActionId + GetLayerQuestion() })), HTMLCode.CSSStyle(Style_CSS.td_button)), TR_Middle_Style_CSS);
 
         if (FindObj({ _id: state.LayerScripter.Buttons[ButtonId].Actions[ActionId].PageId, _type: 'page' })) {
 
@@ -599,10 +715,10 @@ var LayerScripter = LayerScripter || (function () {
         var HTMLCode = new HTMLScripter,
             Output = '',
             ActionId,
-            Action_Output,
             Button_Output = '',
             ButtonId,
             ShowActionButtonText = '',
+            ShowActionDetailText = '',
             TR_Bottom_Style_CSS,
             TR_Middle_Style_CSS,
             TR_Top_Style_CSS,
@@ -627,16 +743,8 @@ var LayerScripter = LayerScripter || (function () {
             if (typeof state.LayerScripter.Buttons[ButtonId].Name === 'string') {
                 Button_Output += HTMLCode.build('td', state.LayerScripter.Buttons[ButtonId].Name, HTMLCode.CSSStyle(Style_CSS.td_text));
             }
-            if (state.LayerScripter.Buttons[ButtonId].ShowActions) {
-                ShowActionButtonText = 'Less';
-            }
-            else {
-                ShowActionButtonText = 'More';
-            }
-            Button_Output += HTMLCode.build('td', HTMLCode.build('a', ShowActionButtonText, Object.assign(HTMLCode.CSSStyle(Style_CSS.a_greembutton), { href: '!LayerScripter --ListActions ' + ButtonId })), HTMLCode.CSSStyle(Style_CSS.td_button));
+            Button_Output += HTMLCode.build('td', HTMLCode.build('a', 'Rename', Object.assign(HTMLCode.CSSStyle(Style_CSS.a_greembutton), { href: '!LayerScripter --RenameButton ' + ButtonId + ' ?{New Name}' })), HTMLCode.CSSStyle(Style_CSS.td_button));
             Button_Output += HTMLCode.build('td', HTMLCode.build('a', 'Remove', Object.assign(HTMLCode.CSSStyle(Style_CSS.a_redbutton), { href: '!LayerScripter --RemoveButton ' + ButtonId })), HTMLCode.CSSStyle(Style_CSS.td_button));
-
-
             Output += HTMLCode.build('tr', Button_Output, TR_Top_Style_CSS);
 
             if (state.LayerScripter.Buttons[ButtonId].ShowActions) {
@@ -645,22 +753,41 @@ var LayerScripter = LayerScripter || (function () {
 
                     if (state.LayerScripter.Buttons[ButtonId].Actions[ActionId].ShowDetail) {
                         Output += ShowActionDetail(ButtonId, ActionId, TR_Middle_Style_CSS);
+                        ShowActionDetailText = 'Less';
                     }
+                    else {
+                        ShowActionDetailText = 'More';
+                    };
+
+                    Output += HTMLCode.build('tr', HTMLCode.build('td', HTMLCode.build('a', ShowActionDetailText, Object.assign(HTMLCode.CSSStyle(Style_CSS.a_greembutton), { href: '!LayerScripter --ListActionsDetail ' + ButtonId + ' ' + ActionId })), Object.assign(HTMLCode.CSSStyle(Style_CSS.td_more_less_action), { colspan: '3' })), TR_Middle_Style_CSS);
+
                 }
-                Output += HTMLCode.build('tr', HTMLCode.build('td', HTMLCode.build('a', 'Add Action', Object.assign(HTMLCode.CSSStyle(Style_CSS.a_addaction), { href: '!LayerScripter --AddAction ' + ButtonId + ' ?{New Layer|gmlayer|objects|map|walls}' })), Object.assign(HTMLCode.CSSStyle(Style_CSS.td_addaction), { colspan: '3' })), TR_Bottom_Style_CSS);
+                Output += HTMLCode.build('tr', HTMLCode.build('td', HTMLCode.build('a', 'Add Action', Object.assign(HTMLCode.CSSStyle(Style_CSS.a_addaction), { href: '!LayerScripter --AddAction ' + ButtonId + GetLayerQuestion() })), Object.assign(HTMLCode.CSSStyle(Style_CSS.td_addaction), { colspan: '3' })), TR_Middle_Style_CSS);
+                ShowActionButtonText = 'Less';
+            }
+            else {
+                ShowActionButtonText = 'More';
             };
+
+            Button_Output = '';
+
+            Button_Output += HTMLCode.build('td', HTMLCode.build('a', ShowActionButtonText, Object.assign(HTMLCode.CSSStyle(Style_CSS.a_greembutton), { href: '!LayerScripter --ListActions ' + ButtonId })), Object.assign(HTMLCode.CSSStyle(Style_CSS.td_more_less_button), { colspan: '3' }));
+
+            Output += HTMLCode.build('tr', Button_Output, TR_Middle_Style_CSS);
+
         };
 
         if (Odd_Row) {
-            Output += HTMLCode.build('tr', HTMLCode.build('td', HTMLCode.build('a', 'Add New Button', Object.assign(HTMLCode.CSSStyle(Style_CSS.a_addbutton), { href: '!LayerScripter --AddButton ?{Button Name}' })), Object.assign(HTMLCode.CSSStyle(Style_CSS.td_addbutton), { colspan: '3' })), HTMLCode.CSSStyle(Style_CSS.tr_bottom_gray));
+            Output += HTMLCode.build('tr', HTMLCode.build('td', HTMLCode.build('a', 'Add New Button', Object.assign(HTMLCode.CSSStyle(Style_CSS.a_addbutton), { href: '!LayerScripter --AddButton ?{Button Name}' })), Object.assign(HTMLCode.CSSStyle(Style_CSS.td_addbutton), { colspan: '3' })), HTMLCode.CSSStyle(Style_CSS.tr_bottom));
         }
         else {
-            Output += HTMLCode.build('tr', HTMLCode.build('td', HTMLCode.build('a', 'Add New Button', Object.assign(HTMLCode.CSSStyle(Style_CSS.a_addbutton), { href: '!LayerScripter --AddButton ?{Button Name}' })), Object.assign(HTMLCode.CSSStyle(Style_CSS.td_addbutton), { colspan: '3' })), HTMLCode.CSSStyle(Style_CSS.tr_bottom));
+            Output += HTMLCode.build('tr', HTMLCode.build('td', HTMLCode.build('a', 'Add New Button', Object.assign(HTMLCode.CSSStyle(Style_CSS.a_addbutton), { href: '!LayerScripter --AddButton ?{Button Name}' })), Object.assign(HTMLCode.CSSStyle(Style_CSS.td_addbutton), { colspan: '3' })), HTMLCode.CSSStyle(Style_CSS.tr_bottom_gray));
         }
 
         Output = HTMLCode.build('tbody', Output, {});
         Output = HTMLCode.build('table', Output, HTMLCode.CSSStyle(Style_CSS.table));
         Output = HTMLCode.build('div', Output, HTMLCode.CSSStyle(Style_CSS.div_left));
+
         return (Output);
     };
 
