@@ -1,0 +1,20 @@
+{
+    "name": "Layer Scripter",
+    "script": "LayerScripter.js",
+    "version": "0.5b",
+    "previousversions": [
+        
+    ],
+    "description": "",
+    "authors": "Michael S",
+    "roll20userid": "1377180",
+    "useroptions": [],
+    "dependencies": [],
+    "modifies": {
+        "state.LayerScripter": "read,write",
+        "graphic.*": "read,write",
+        "path.*": "read,write",
+        "macro.*": "read,write"
+    },
+    "conflicts": []
+}
