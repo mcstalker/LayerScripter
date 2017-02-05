@@ -294,99 +294,97 @@ var LayerScripter = LayerScripter || (function () {
             NewName,
             debugstate = 'disabled';
 
-        args = args.join(',').toLowerCase().split(',');
+        //args = args.join(',').toLowerCase().split(',');
 
-        if ((Roll20_msg.type == "api") && (API_CALL_STRING == args[0])) {
+        if ((Roll20_msg.type == "api") && (API_CALL_STRING == args[0].toLowerCase())) {
             if (playerIsGM(Roll20_msg.playerid)) {
 
                 state.LayerScripter.Configurations.DebugEnalbed ? DebugMessage('API Call found in chat message.') : '';
 
-                if (args[0].indexOf(API_CALL_STRING) === 0) {
+                if (args[0].toLowerCase().indexOf(API_CALL_STRING) === 0) {
                     args = args.splice(1, args.length - 1);
                 };
 
-                if (args.indexOf(DEBUG) > -1) {
-                    args = args.splice(args.indexOf(DEBUG), 1);
-
-                    state.LayerScripter.Configurations.DebugEnalbed = !state.LayerScripter.Configurations.DebugEnalbed;
-                    DebugEnalbed = state.LayerScripter.Configurations.DebugEnalbed;
-
-                    if (state.LayerScripter.Configurations.DebugEnalbed) {
-                        debugstate = 'enabled';
-                    }
-
-                    log('Layer scripter debug mode is now ' + debugstate + '.');
-                };
-
                 if (args.length > 0) {
-                    arg = args.shift().split(/\s+/);
-                    switch (arg[0].toLowerCase()) {
-                        case 'addaction':
-                            ButtonId = arg.splice(1, 1)[0];
-                            NewLayer = arg.splice(1, 1)[0];
-                            AddAction(ButtonId, Roll20_msg.selected, NewLayer);
-                            break;
-                        case 'addbutton':
-                            ButtonName = arg.splice(1, arg.length - 1).join('-');
-                            AddButton(ButtonName, Roll20_msg.playerid);
-                            break;
-                        case 'changecurrentlayer':
-                            ButtonId = arg.splice(1, 1)[0];
-                            ActionId = arg.splice(1, 1)[0];
-                            NewLayer = arg.splice(1, 1)[0];
-                            ChangeCurrentLayer(ButtonId, ActionId, NewLayer);
-                            break
-                        case 'changenewlayer':
-                            ButtonId = arg.splice(1, 1)[0];
-                            ActionId = arg.splice(1, 1)[0];
-                            NewLayer = arg.splice(1, 1)[0];
-                            ChangeActionLayer(ButtonId, ActionId, NewLayer);
-                            break
-                        case 'executed':
-                            ButtonId = arg.splice(1, 1)[0];
-                            ExecutedButton(ButtonId);
-                            break;
-                        case 'executeaction':
-                            ButtonId = arg.splice(1, 1)[0];
-                            ActionId = arg.splice(1, 1)[0];
-                            ExecuteAction(ButtonId, ActionId);
-                            break;
-                        case 'help':
-                            ShowHelp();
-                            break;
-                        case 'listactions':
-                            ButtonId = arg.splice(1, 1)[0];
-                            ChangeShowAction(ButtonId);
-                            break;
-                        case 'listactionsdetail':
-                            ButtonId = arg.splice(1, 1)[0];
-                            ActionId = arg.splice(1, 1)[0];
-                            ChangeShowActionDetail(ButtonId, ActionId);
-                            break;
-                        case 'removebutton':
-                            ButtonId = arg.splice(1, 1)[0];
-                            RemoveButton(ButtonId)
-                            break;
-                        case 'removeaction':
-                            ButtonId = arg.splice(1, 1)[0];
-                            ActionId = arg.splice(1, 1)[0];
-                            RemoveAction(ButtonId, ActionId);
-                            break;
-                        case 'renameaction':
-                            ButtonId = arg.splice(1, 1)[0];
-                            ActionId = arg.splice(1, 1)[0];
-                            NewName = arg.splice(1, arg.length - 1).join(' ');
-                            RenameAction(ButtonId, ActionId, NewName);
-                            break;
-                        case 'renamebutton':
-                            ButtonId = arg.splice(1, 1)[0];
-                            NewName = arg.splice(1, arg.length - 1).join('-');
-                            RenameButton(ButtonId, NewName);
-                            break;
-                        default:
-                            ShowButtons();
-                            break;
-                    };
+                    args.forEach (function (arg) {
+                        arg = arg.split(/\s+/);
+                        switch (arg[0].toLowerCase()) {
+                            case 'addaction':
+                                ButtonId = arg.splice(1, 1)[0];
+                                NewLayer = arg.splice(1, 1)[0];
+                                AddAction(ButtonId, Roll20_msg.selected, NewLayer);
+                                break;
+                            case 'addbutton':
+                                ButtonName = arg.splice(1, arg.length - 1).join('-');
+                                AddButton(ButtonName, Roll20_msg.playerid);
+                                break;
+                            case 'changecurrentlayer':
+                                ButtonId = arg.splice(1, 1)[0];
+                                ActionId = arg.splice(1, 1)[0];
+                                NewLayer = arg.splice(1, 1)[0];
+                                ChangeCurrentLayer(ButtonId, ActionId, NewLayer);
+                                break
+                            case 'changenewlayer':
+                                ButtonId = arg.splice(1, 1)[0];
+                                ActionId = arg.splice(1, 1)[0];
+                                NewLayer = arg.splice(1, 1)[0];
+                                ChangeActionLayer(ButtonId, ActionId, NewLayer);
+                                break
+                            case 'executed':
+                                ButtonId = arg.splice(1, 1)[0];
+                                ExecutedButton(ButtonId);
+                                break;
+                            case 'executeaction':
+                                ButtonId = arg.splice(1, 1)[0];
+                                ActionId = arg.splice(1, 1)[0];
+                                ExecuteAction(ButtonId, ActionId);
+                                break;
+                            case 'help':
+                                ShowHelp();
+                                break;
+                            case 'listactions':
+                                ButtonId = arg.splice(1, 1)[0];
+                                ChangeShowAction(ButtonId);
+                                break;
+                            case 'listactionsdetail':
+                                ButtonId = arg.splice(1, 1)[0];
+                                ActionId = arg.splice(1, 1)[0];
+                                ChangeShowActionDetail(ButtonId, ActionId);
+                                break;
+                            case 'removebutton':
+                                ButtonId = arg.splice(1, 1)[0];
+                                RemoveButton(ButtonId)
+                                break;
+                            case 'removeaction':
+                                ButtonId = arg.splice(1, 1)[0];
+                                ActionId = arg.splice(1, 1)[0];
+                                RemoveAction(ButtonId, ActionId);
+                                break;
+                            case 'renameaction':
+                                ButtonId = arg.splice(1, 1)[0];
+                                ActionId = arg.splice(1, 1)[0];
+                                NewName = arg.splice(1, arg.length - 1).join(' ');
+                                RenameAction(ButtonId, ActionId, NewName);
+                                break;
+                            case 'renamebutton':
+                                ButtonId = arg.splice(1, 1)[0];
+                                NewName = arg.splice(1, arg.length - 1).join('-');
+                                RenameButton(ButtonId, NewName);
+                                break;
+                            case DEBUG:
+                                args = args.splice(args.indexOf(DEBUG), 1);
+
+                                state.LayerScripter.Configurations.DebugEnalbed = !state.LayerScripter.Configurations.DebugEnalbed;
+                                DebugEnalbed = state.LayerScripter.Configurations.DebugEnalbed;
+
+                                if (state.LayerScripter.Configurations.DebugEnalbed) {
+                                    debugstate = 'enabled';
+                                }
+
+                                log('Layer scripter v' + Version + ' debug mode is now ' + debugstate + '.');
+                                break;
+                        }
+                    });
                 };
                 ShowMenu();
             };
@@ -815,7 +813,7 @@ var LayerScripter = LayerScripter || (function () {
 
         DebugEnalbed && DebugMessage('Entering Function with output_msg::' + output_msg);
 
-        sendChat('LayerScripter', '/w gm ' + output_msg);
+        sendChat('Layer Scripter v' + Version, '/w gm ' + output_msg, null, { noarchive: true });
         DebugEnalbed && DebugMessage('Exiting function with false');
     }
 
@@ -843,14 +841,20 @@ var LayerScripter = LayerScripter || (function () {
 
         var Action_Detail_Output = '',
             HTMLCode = new HTMLScripter,
+            Img, 
             Obj,
             PageName;
 
 
-        state.LayerScripter.Buttons[ButtonId].Actions[ActionId].Type
-        state.LayerScripter.Buttons[ButtonId].Actions[ActionId].CurrentLayer
-        state.LayerScripter.Buttons[ButtonId].Actions[ActionId].NewLayer
-        state.LayerScripter.Buttons[ButtonId].Actions[ActionId].PageId
+        if (state.LayerScripter.Buttons[ButtonId].Actions[ActionId].Type == 'graphic') {
+            
+            Obj = FindObj({ _id: ActionId, _type: state.LayerScripter.Buttons[ButtonId].Actions[ActionId].Type })[0];
+
+            Img = '<img src="' + Obj.get('imgsrc') + '" style="width: 30px ; height: 30px">';
+        }
+        //state.LayerScripter.Buttons[ButtonId].Actions[ActionId].CurrentLayer
+        //state.LayerScripter.Buttons[ButtonId].Actions[ActionId].NewLayer
+        //state.LayerScripter.Buttons[ButtonId].Actions[ActionId].PageId
 
         Action_Detail_Output += HTMLCode.build('tr', HTMLCode.build('td', 'Type: ' + state.LayerScripter.Buttons[ButtonId].Actions[ActionId].Type, Object.assign({ colspan: '2' }, HTMLCode.CSSStyle(Style_CSS.td_action_detail_text))) + HTMLCode.build('td', HTMLCode.build('a', 'Execute', Object.assign(HTMLCode.CSSStyle(Style_CSS.a_greembutton), { href: '!LayerScripter --ExecuteAction ' + ButtonId + ' ' + ActionId })), HTMLCode.CSSStyle(Style_CSS.td_button)), TR_Middle_Style_CSS);
         Action_Detail_Output += HTMLCode.build('tr', HTMLCode.build('td', 'Current Layer: ' + state.LayerScripter.Buttons[ButtonId].Actions[ActionId].CurrentLayer, Object.assign({ colspan: '2' }, HTMLCode.CSSStyle(Style_CSS.td_action_detail_text))) + HTMLCode.build('td', HTMLCode.build('a', 'Change', Object.assign(HTMLCode.CSSStyle(Style_CSS.a_greembutton), { href: '!LayerScripter --ChangeCurrentLayer ' + ButtonId + ' ' + ActionId + GetLayerQuestion() })), HTMLCode.CSSStyle(Style_CSS.td_button)), TR_Middle_Style_CSS);
@@ -1002,11 +1006,3 @@ on('ready', function () {
     LayerScripter.CheckInstalled();
     LayerScripter.RegisterEventHandlers();
 });
-
-
-
-//var HTML = new HTMLScripter(),
-//    attrs = HTML.CSSStyle(Style_CSS.a_greembutton),
-//    string = HTML.build('div', 'This is a test message.', attrs);
-
-//sendChat('Me', string);
