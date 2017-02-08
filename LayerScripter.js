@@ -41,7 +41,7 @@ var HTMLScripter = HTMLScripter || (function () {
 var LayerScripter = LayerScripter || (function () {
     'use strict';
 
-    var DebugEnalbed = state.LayerScripter.Configurations.DebugEnalbed;
+    var DebugEnalbed;
     const
         API_CALL_STRING = '!layerscripter',
         ADD_BUTTON = '!layerscripter_add_button',
@@ -55,7 +55,7 @@ var LayerScripter = LayerScripter || (function () {
         CHANGE_DEST_LAYER = '!layerscripter_new_destination_layer',
         VALID_LAYERS = ['gmlayer', 'objects', 'map', 'walls'],
         DEBUG = 'debug',
-        Version = '0.6b',
+        Version = '0.6.1b',
         Schema = 0.2,
         Style_CSS = {
             div_outer: {
@@ -488,6 +488,8 @@ var LayerScripter = LayerScripter || (function () {
         if (state.LayerScripter.Schema != Schema) {
             UpdateSchema();
         }
+
+        DebugEnalbed = state.LayerScripter.Configurations.DebugEnalbed;
 
         DebugEnalbed && DebugMessage('Exiting function');
     };
