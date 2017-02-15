@@ -1,10 +1,11 @@
 {
     "name": "Layer Scripter",
     "script": "LayerScripter.js",
-    "version": "0.6.1b",
+    "version": "0.6.2b",
     "previousversions": [
-        "0.5b", 
-        "0.6b"
+        "0.5b",
+        "0.6b",
+        "0.6.1b"
     ],
     "description": "",
     "authors": "Michael S",
