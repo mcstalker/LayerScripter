@@ -55,7 +55,7 @@ var LayerScripter = LayerScripter || (function () {
         CHANGE_DEST_LAYER = '!layerscripter_new_destination_layer',
         VALID_LAYERS = ['gmlayer', 'objects', 'map', 'walls'],
         DEBUG = 'debug',
-        Version = '0.6.1b',
+        Version = '0.6.2b',
         Schema = 0.2,
         Style_CSS = {
             div_outer: {
@@ -266,6 +266,9 @@ var LayerScripter = LayerScripter || (function () {
         }
         else if (IsButtonNameUnique(ButtonName)) {
             ButtonId = GetMacroButtonId(ButtonName);
+            if (typeof state.LayerScripter.Buttons === 'undefined') {
+                state.LayerScripter.Buttons = {};
+            }
             state.LayerScripter.Buttons[ButtonId] = {};
             state.LayerScripter.Buttons[ButtonId].Name = ButtonName;
             state.LayerScripter.Buttons[ButtonId].MacroId = GetOrCreateMacroButton(ButtonId, PlayerId);
@@ -480,6 +483,7 @@ var LayerScripter = LayerScripter || (function () {
         if (typeof state.LayerScripter === 'undefined') {
             state.LayerScripter = {};
             state.LayerScripter.Version = Version;
+            state.LayerScripter.Schema = 0.0;
             UpdateSchema();
         }
         else if (state.LayerScripter.Version != Version) {
@@ -977,21 +981,27 @@ var LayerScripter = LayerScripter || (function () {
 
         DebugEnalbed && DebugMessage('Entering Function');
 
-        switch (Schema) {
-            case 0.1:
+        if (state.LayerScripter.Schema <= 0.1) {
+            if (typeof state.LayerScripter.Configurations === 'undefined') {
                 state.LayerScripter.Configurations = {
                     CreateMacroButton: true,
                     AutoArchive: true,
                 };
+            }
 
+            if (typeof state.LayerScripter.Buttons === 'undefined') {
                 state.LayerScripter.Buttons = {};
-            case 0.2:
-                state.LayerScripter.Configurations = {
-                    DebugEnalbed: false,
-                };
-                break;
-        };
+            }
+        }   
+
+        if (state.LayerScripter.Schema <= 0.2) {
+            if (typeof state.LayerScripter.Configurations.DebugEnalbed === 'undefined') {
+                state.LayerScripter.Configurations.DebugEnalbed = false;
+            }
+        }
+
         state.LayerScripter.Schema = Schema;
+
         DebugEnalbed && DebugMessage('Exiting function');
     };
 
